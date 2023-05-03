@@ -31,7 +31,7 @@
     <Compile Include="RegAlloc.fs" />
     <Compile Include="CodeGen.fs" />
 
-    <Compile Include="Fasto.fsx" />
+    <Compile Include="Fasto.fs" />
   </ItemGroup>
 
 
