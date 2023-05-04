@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "v0ZK9cM+peTcG709K8APpEXeq9blrbH22vAsDlyoA41R9ZEdW7rjJQ0HHPv4ZbTcFNQD/9+SE6T0RfnYPMjCLQ==",
+  "dgSpecHash": "cDoIeryDhUPuZO31vuQjLjbnzW2HRO6vduZScswZfqYBAAzZEmwxNFngKej/bC7Fhfme2/23NhPJdzBk/SDCig==",
   "success": true,
-  "projectFilePath": "C:\\Users\\Victo\\Documents\\GitHub\\IPS\\fasto\\fasto\\Fasto.fsproj",
+  "projectFilePath": "c:\\Users\\Victo\\Documents\\GitHub\\IPS\\fasto\\fasto\\Fasto.fsproj",
   "expectedPackageFiles": [
     "C:\\Users\\Victo\\.nuget\\packages\\fsharp.core\\7.0.200\\fsharp.core.7.0.200.nupkg.sha512",
     "C:\\Users\\Victo\\.nuget\\packages\\fslexyacc\\10.2.0\\fslexyacc.10.2.0.nupkg.sha512",
