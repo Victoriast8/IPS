@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "c:\\Users\\Victo\\Documents\\GitHub\\IPS\\fasto\\fasto\\Fasto.fsproj": {}
+    "C:\\Users\\Victo\\Documents\\GitHub\\IPS\\fasto\\fasto\\Fasto.fsproj": {}
   },
   "projects": {
-    "c:\\Users\\Victo\\Documents\\GitHub\\IPS\\fasto\\fasto\\Fasto.fsproj": {
+    "C:\\Users\\Victo\\Documents\\GitHub\\IPS\\fasto\\fasto\\Fasto.fsproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "c:\\Users\\Victo\\Documents\\GitHub\\IPS\\fasto\\fasto\\Fasto.fsproj",
+        "projectUniqueName": "C:\\Users\\Victo\\Documents\\GitHub\\IPS\\fasto\\fasto\\Fasto.fsproj",
         "projectName": "Fasto",
-        "projectPath": "c:\\Users\\Victo\\Documents\\GitHub\\IPS\\fasto\\fasto\\Fasto.fsproj",
+        "projectPath": "C:\\Users\\Victo\\Documents\\GitHub\\IPS\\fasto\\fasto\\Fasto.fsproj",
         "packagesPath": "C:\\Users\\Victo\\.nuget\\packages\\",
-        "outputPath": "c:\\Users\\Victo\\Documents\\GitHub\\IPS\\fasto\\fasto\\obj\\",
+        "outputPath": "C:\\Users\\Victo\\Documents\\GitHub\\IPS\\fasto\\fasto\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\Victo\\AppData\\Roaming\\NuGet\\NuGet.Config",

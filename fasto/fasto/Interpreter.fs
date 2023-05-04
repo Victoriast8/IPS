@@ -248,8 +248,15 @@ let rec evalExp (e : UntypedExp, vtab : VarTable, ftab : FunTable) : Value =
          the value of `a`; otherwise raise an error (containing
          a meaningful message).
   *)
-  | Replicate (_, _, _, _) ->
-        failwith "Unimplemented interpretation of replicate"
+  | Replicate (nexp, aexp, tp, pos) ->
+        let resn = evalExp(nexp, vtab, ftab)
+        let resa = evalExp(aexp, vtab, ftab)
+        match (resn, resa) with
+        | (IntVal n, Type a) -> if n >= 0 
+                                      then List.replicate(n, arr)
+                                      else raise(MyError("Replicate does not create negative arrays"), pos)
+        | otherwise -> reportWrongType "arguments of \"replicate\"" nexp arrexp pos
+        //else failwith "Replicate does not create negative arrays"
 
   (* TODO project task 2: `filter(p, arr)`
        pattern match the implementation of map:
