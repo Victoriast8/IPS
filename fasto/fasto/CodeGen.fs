@@ -230,24 +230,46 @@ let rec compileExp  (e      : TypedExp)
       let code2 = compileExp e2 vtable t2
       code1 @ code2 @ [SUB (place,t1,t2)]
 
-  (* TODO project task 1:
-     Look in `AbSyn.fs` for the expression constructors `Times`, ...
-     `Times` is very similar to `Plus`/`Minus`.
-     For `Divide`, you may ignore division by zero for a quick first
-     version, but remember to come back and clean it up later.
-     `Not` and `Negate` are simpler; you can use `XORI` for `Not`
-  *)
-  | Times (_, _, _) ->
-      failwith "Unimplemented code generation of multiplication"
+  | Times (e1, e2, pos) ->
+    let t1 = newReg "times_L"
+    let t2 = newReg "times_R"
+    let code1 = compileExp e1 vtable t1
+    let code2 = compileExp e2 vtable t2
+    code1 @ code2 @ [MUL (place, t1, t2)]
 
-  | Divide (_, _, _) ->
-      failwith "Unimplemented code generation of division"
+  | Divide (e1, e2, pos) ->
+    let t1 = newReg "divide_L"
+    let t2 = newReg "divide_R"
+    let code1 = compileExp e1 vtable t1
+    let code2 = compileExp e2 vtable t2
+    let zeroDivisorLabel = newLab "zero_divisor"
+    let checkZero = [BEQZ (t2, zeroDivisorLabel)]
+    let division = [DIV (place, t1, t2)]
+    let continueLabel = newLab "divide_continue"
+    let zeroDivisorComment = [COMMENT "Division by zero error handling"]
+    let zeroDivisorError = [LABEL zeroDivisorLabel] @ zeroDivisorComment
+    code1 @ code2 @ checkZero @ division @ zeroDivisorError 
 
-  | Not (_, _) ->
-      failwith "Unimplemented code generation of not"
+  | Not (e, pos) ->
+    let t = newReg "not_temp"
+    let code = compileExp e vtable t
+    let notCode = [XORI (place, t, -1)]     //toggle all the bits of the source register; -1=1111 1111 1111
+    code @ notCode
 
-  | Negate (_, _) ->
-      failwith "Unimplemented code generation of negate"
+  | Negate (e, pos) ->
+    let t = newReg "negate_temp"
+    let code = compileExp e vtable t
+    let negationCode = [SUB (place, Rzero, t)]   // Subtract the value from zero to negate it
+    code @ negationCode
+  
+  (* Another implementation of integer negation
+  | Negate (e, pos) ->
+    let t = newReg "negate_temp"
+    let code = compileExp e vtable t
+    let complementCode = [XORI (t, t, -1)]      // Bitwise complement of the value
+    let negationCode = [ADDI (place, t, 1)]     // Add 1 to the complemented value
+    code @ negationCode
+*)
 
   | Let (dec, e1, pos) ->
       let (code1, vtable1) = compileDec dec vtable
@@ -336,18 +358,35 @@ let rec compileExp  (e      : TypedExp)
       let code2 = compileExp e2 vtable t2
       code1 @ code2 @ [SLT (place,t1,t2)]
 
-  (* TODO project task 1:
-        Look in `AbSyn.fs` for the expression constructors of `And` and `Or`.
-        The implementation of `And` and `Or` is more complicated than `Plus`
-        because you need to ensure the short-circuit semantics, e.g.,
-        in `e1 || e2` if the execution of `e1` will evaluate to `true` then
-        the code of `e2` must not be executed. Similarly for `And` (&&).
-  *)
-  | And (_, _, _) ->
-      failwith "Unimplemented code generation of &&"
+  (*  There are no BEQZ nor BNEZ. ONLY BEQ ans BNE
+  TODO And and Or
+  
+  | And (e1, e2, pos) ->
+    let t = newReg "and_temp"
+    let code1 = compileExp e1 vtable t
+    let shortCircuitLabel = newLab "and_short_circuit"
+    let continueLabel = newLab "and_continue"
+    let andCode = [
+        BEQZ (code1, shortCircuitLabel);  // If e1 evaluates to false, jump to short-circuit label
+        compileExp e2 vtable place;       // Evaluate e2 if e1 is true
+        J continueLabel;                  // Jump to the continue label after evaluating e2
+        LABEL shortCircuitLabel;          // Label for short-circuit case
+        LI (place, 0);                    // Set the result to false
+        LABEL continueLabel                // Label for continuing execution
+    ]
+    code1 @ andCode
 
-  | Or (_, _, _) ->
-      failwith "Unimplemented code generation of ||"
+  | Or (e1, e2, pos) ->
+    let t = newReg "or_temp"
+    let code1 = compileExp e1 vtable t
+    let continueLabel = newLab "or_continue"
+    let orCode = [
+        BNEZ (code1, continueLabel);      // If e1 evaluates to true, skip evaluation of e2
+        compileExp e2 vtable place;       // Evaluate e2 if e1 is false
+        LABEL continueLabel;              // Label for continuing execution
+        LI (place, 1);                    // Set the result to true
+    ]
+    code1 @ orCode *)
 
   (* Indexing:
      1. generate code to compute the index
