@@ -358,35 +358,43 @@ let rec compileExp  (e      : TypedExp)
       let code2 = compileExp e2 vtable t2
       code1 @ code2 @ [SLT (place,t1,t2)]
 
-  (*  There are no BEQZ nor BNEZ. ONLY BEQ ans BNE
-  TODO And and Or
-  
   | And (e1, e2, pos) ->
-    let t = newReg "and_temp"
-    let code1 = compileExp e1 vtable t
-    let shortCircuitLabel = newLab "and_short_circuit"
-    let continueLabel = newLab "and_continue"
-    let andCode = [
-        BEQZ (code1, shortCircuitLabel);  // If e1 evaluates to false, jump to short-circuit label
-        compileExp e2 vtable place;       // Evaluate e2 if e1 is true
-        J continueLabel;                  // Jump to the continue label after evaluating e2
-        LABEL shortCircuitLabel;          // Label for short-circuit case
-        LI (place, 0);                    // Set the result to false
-        LABEL continueLabel                // Label for continuing execution
-    ]
-    code1 @ andCode
+    let t1 = newReg "and_temp_1"
+    let t2 = newReg "and_temp_2"
+    let tempReg = newReg "and_temp_reg"
+    let code1 = compileExp e1 vtable t1
+    let code2 = compileExp e2 vtable t2
+    let falseLabel = newLab "and_false"
+    let endLabel = newLab "and_end"
+    code1 @ code2 @
+        [ BEQ (t1, Rzero, falseLabel)        // If e1 is false, jump to falseLabel
+        ; BEQ (t2, Rzero, falseLabel)        // If e2 is false, jump to falseLabel
+        ; LI (place, 1);                     // If both e1 and e2 are true, set result to true
+        ; J endLabel;                        // Jump to endLabel
+        ; LABEL falseLabel;                  // Label for false case
+        ; LI (place, 0)                      // Set the result to false
+        ; LABEL endLabel                     // Label for end of function
+        ]
 
   | Or (e1, e2, pos) ->
-    let t = newReg "or_temp"
-    let code1 = compileExp e1 vtable t
-    let continueLabel = newLab "or_continue"
-    let orCode = [
-        BNEZ (code1, continueLabel);      // If e1 evaluates to true, skip evaluation of e2
-        compileExp e2 vtable place;       // Evaluate e2 if e1 is false
-        LABEL continueLabel;              // Label for continuing execution
-        LI (place, 1);                    // Set the result to true
-    ]
-    code1 @ orCode *)
+    let t1 = newReg "or_temp_1"
+    let t2 = newReg "or_temp_2"
+    let r1 = newReg "or_one"
+    let code1 = compileExp e1 vtable t1
+    let code2 = compileExp e2 vtable t2
+    let trueLabel = newLab "or_true"
+    let endLabel = newLab "or_end"
+    code1 @ code2 @
+        [ LI (r1, 1)                        // Load 1 into r1
+        ; BEQ (t1, r1, trueLabel)           // If e1 is true (equal to r1), jump to trueLabel
+        ; BEQ (t2, r1, trueLabel)           // If e2 is true (equal to r1), jump to trueLabel
+        ; LI (place, 0)                     // If both e1 and e2 are false, set result to false
+        ; J endLabel                        // Jump to endLabel
+        ; LABEL trueLabel                   // Label for true case
+        ; LI (place, 1)                     // Set the result to true
+        ; LABEL endLabel                      // Label for end of function
+        ]
+     
 
   (* Indexing:
      1. generate code to compute the index
