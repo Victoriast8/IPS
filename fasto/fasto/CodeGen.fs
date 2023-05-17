@@ -243,9 +243,8 @@ let rec compileExp  (e      : TypedExp)
     let code1 = compileExp e1 vtable t1
     let code2 = compileExp e2 vtable t2
     let zeroDivisorLabel = newLab "zero_divisor"
-    let checkZero = [BEQZ (t2, zeroDivisorLabel)]
+    let checkZero = [BEQ (t2, Rzero, zeroDivisorLabel)]
     let division = [DIV (place, t1, t2)]
-    let continueLabel = newLab "divide_continue"
     let zeroDivisorComment = [COMMENT "Division by zero error handling"]
     let zeroDivisorError = [LABEL zeroDivisorLabel] @ zeroDivisorComment
     code1 @ code2 @ checkZero @ division @ zeroDivisorError 
