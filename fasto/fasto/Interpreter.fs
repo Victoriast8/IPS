@@ -251,12 +251,10 @@ let rec evalExp (e : UntypedExp, vtab : VarTable, ftab : FunTable) : Value =
   | Replicate (nexp, aexp, tp, pos) ->
         let resn = evalExp(nexp, vtab, ftab)
         let resa = evalExp(aexp, vtab, ftab)
-        match (resn, resa) with
-        | (IntVal n, Type a) -> if n >= 0 
-                                      then List.replicate(n, arr)
-                                      else raise(MyError("Replicate does not create negative arrays"), pos)
-        | otherwise -> reportWrongType "arguments of \"replicate\"" nexp arrexp pos
-        //else failwith "Replicate does not create negative arrays"
+        match resn with
+        | IntVal n when n >= 0 -> 
+            ArrayVal ((List.replicate n resa), Int) // TODO: 2nd argument should be either Int or Array, not some static type. Also throw right error.
+        | otherwise            -> failwith "Replicate does not create negative arrays" // TODO: update error
 
   (* TODO project task 2: `filter(p, arr)`
        pattern match the implementation of map:
@@ -266,8 +264,15 @@ let rec evalExp (e : UntypedExp, vtab : VarTable, ftab : FunTable) : Value =
          under predicate `p`, i.e., `p(a) = true`;
        - create an `ArrayVal` from the (list) result of the previous step.
   *)
-  | Filter (_, _, _, _) ->
-        failwith "Unimplemented interpretation of filter"
+  | Filter (p, arr, _, pos) ->
+        let farg_ret_type = rtpFunArg p ftab pos
+        let arrres = evalExp(arr, vtab, ftab)
+        match farg_ret_type with
+        | Bool _     ->
+            match arrres with
+            | ArrayVal (arr,tp1) -> failwith "bruh"
+            | otherwise          -> reportNonArray "2nd argument of \"filter\"" arrres pos
+        | otherwise  -> raise (MyError ("Predicate of \"filter\" returned wrong type", pos)) // TODO: update error
 
   (* TODO project task 2: `scan(f, ne, arr)`
      Implementation similar to reduce, except that it produces an array
