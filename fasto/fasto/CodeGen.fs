@@ -540,8 +540,39 @@ let rec compileExp  (e      : TypedExp)
         If `n` is less than `0` then remember to terminate the program with
         an error -- see implementation of `iota`.
   *)
-  | Replicate (_, _, _, _) ->
-      failwith "Unimplemented code generation of replicate"
+  | Replicate (n_exp, a_exp, tp, pos) ->
+      let size_reg = newReg "size" (* size of input/output array *)
+      let arr_reg  = newReg "arr"  (* address of array *)
+      let addr_reg = newReg "addrg" (* address of element in new array *)
+      let i_reg = newReg "i"
+      et arr_code = compileExp arr_exp vtable arr_reg
+
+      let init_regs = [ ADDI (addr_reg, place, 4)
+                      ; MV (i_reg, Rzero)
+                      ; ADDI (elem_reg, arr_reg, 4)
+                      ]
+
+      let loop_beg = newLab "loop_beg"
+      let loop_end = newLab "loop_end"
+      let loop_header = [ LABEL (loop_beg)
+                        ; BGE (i_reg, size_reg, loop_end)
+                        ]
+      let loop_replicate = [ Store elem_size (elem_reg, addr_reg, 0)
+                           ; ADDI (addr_reg, addr_reg, elemSizeToInt elem_size)
+                           ]
+      let loop_footer =
+              [ ADDI (i_reg, i_reg, 1)
+              ; J loop_beg
+              ; LABEL loop_end
+              ]
+
+      arr_code
+       @ get_size
+       @ dynalloc (size_reg, place, ret_type)
+       @ init_regs
+       @ loop_header
+       @ loop_replicate
+       @ loop_footer
 
   (* TODO project task 2: see also the comment to replicate.
      (a) `filter(f, arr)`:  has some similarity with the implementation of map.

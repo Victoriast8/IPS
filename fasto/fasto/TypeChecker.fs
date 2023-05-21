@@ -294,7 +294,14 @@ and checkExp  (ftab : FunTable)
         - assuming `a` is of type `t` the result type
           of replicate is `[t]`
     *)
-    | Replicate (_, _, _, _) ->
+    | Replicate (e_exp1, e_exp2, _, pos) ->
+      let (t1, e1) = checkExp ftab vtab e_exp1
+      let (t2, e2) = checkExp ftab vtab e_exp2
+      if t1 <> Int then
+        reportTypeWrong "argument of replicate" Int t1 pos
+      (Array t2, Replicate (e1, e2, t2, pos))
+      
+
         failwith "Unimplemented type check of replicate"
 
     (* TODO project task 2: Hint for `filter(f, arr)`

@@ -248,13 +248,13 @@ let rec evalExp (e : UntypedExp, vtab : VarTable, ftab : FunTable) : Value =
          the value of `a`; otherwise raise an error (containing
          a meaningful message).
   *)
-  | Replicate (nexp, aexp, tp, pos) ->
-        let resn = evalExp(nexp, vtab, ftab)
-        let resa = evalExp(aexp, vtab, ftab)
-        match resn with
+  | Replicate (n_exp, a_exp, tp, pos) ->
+        let res_n = evalExp(n_exp, vtab, ftab)
+        let res_a = evalExp(a_exp, vtab, ftab)
+        match res_n with
         | IntVal n when n >= 0 -> 
-            ArrayVal ((List.replicate n resa), Int) // TODO: 2nd argument should be either Int or Array, not some static type. Also throw right error.
-        | otherwise            -> failwith "Replicate does not create negative arrays" // TODO: update error
+            ArrayVal ((List.replicate n res_a), (valueType res_a))
+        | otherwise            -> failwith "Replicate does not create negative arrays" // TODO: update error - Viggo
 
   (* TODO project task 2: `filter(p, arr)`
        pattern match the implementation of map:
