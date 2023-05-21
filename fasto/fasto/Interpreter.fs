@@ -253,7 +253,7 @@ let rec evalExp (e : UntypedExp, vtab : VarTable, ftab : FunTable) : Value =
         let resa = evalExp(aexp, vtab, ftab)
         match resn with
         | IntVal n when n >= 0 -> 
-            ArrayVal ((List.replicate n resa), Int) // TODO: 2nd argument should be either Int or Array, not some static type. Also throw right error.
+            ArrayVal ((List.replicate n resa), (valueType resa)) // TODO: 2nd argument should be either Int or Array, not some static type. Also throw right error.
         | otherwise            -> failwith "Replicate does not create negative arrays" // TODO: update error
 
   (* TODO project task 2: `filter(p, arr)`
@@ -264,22 +264,35 @@ let rec evalExp (e : UntypedExp, vtab : VarTable, ftab : FunTable) : Value =
          under predicate `p`, i.e., `p(a) = true`;
        - create an `ArrayVal` from the (list) result of the previous step.
   *)
-  | Filter (p, arr, _, pos) ->
+  | Filter (p, arrexp, _, pos) ->
         let farg_ret_type = rtpFunArg p ftab pos
-        let arrres = evalExp(arr, vtab, ftab)
+        let resa = evalExp(arrexp, vtab, ftab)
         match farg_ret_type with
         | Bool _     ->
-            match arrres with
-            | ArrayVal (arr,tp1) -> failwith "bruh"
-            | otherwise          -> reportNonArray "2nd argument of \"filter\"" arrres pos
+            match resa with
+            | ArrayVal (arrval, tp1) -> 
+                  let extractBool (value: Value) : bool =
+                        match value with
+                        | BoolVal b -> b
+                        | _         -> false
+                  let farr = List.filter (fun x -> extractBool (evalFunArg (p, vtab, ftab, pos, [x]))) arrval
+                  ArrayVal ((farr), tp1)
+            | otherwise              -> reportNonArray "2nd argument of \"filter\"" resa pos
         | otherwise  -> raise (MyError ("Predicate of \"filter\" returned wrong type", pos)) // TODO: update error
 
   (* TODO project task 2: `scan(f, ne, arr)`
      Implementation similar to reduce, except that it produces an array
      of the same type and length to the input array `arr`.
   *)
-  | Scan (_, _, _, _, _) ->
-        failwith "Unimplemented interpretation of scan"
+  | Scan (farg, ne, arr, tp, pos) ->
+        let farg_ret_type = rtpFunArg farg ftab pos
+        let resn = evalExp(ne, vtab, ftab)
+        let resa = evalExp(arr, vtab, ftab)
+        match resa with
+        | ArrayVal (arrval, tp1) -> 
+            let slst = List.scan (fun acc x -> evalFunArg (farg, vtab, ftab, pos, [acc;x])) resn arrval // TODO: unsure if this works. Test it
+            ArrayVal (slst, tp1)
+        | otherwise              -> reportNonArray "3rd argument of \"filter\"" resa pos
 
   | Read (t,p) ->
         let str = Console.ReadLine()
