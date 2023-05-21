@@ -358,32 +358,32 @@ let rec compileExp  (e      : TypedExp)
       code1 @ code2 @ [SLT (place,t1,t2)]
 
   | And (e1, e2, pos) ->
-    let t1 = newReg "and_temp_1"
-    let t2 = newReg "and_temp_2"
-    let tempReg = newReg "and_temp_reg"
-    let code1 = compileExp e1 vtable t1
-    let code2 = compileExp e2 vtable t2
-    let falseLabel = newLab "and_false"
-    let endLabel = newLab "and_end"
-    code1 @ code2 @
+      let t1 = newReg "and_temp_1"
+      let t2 = newReg "and_temp_2"
+      let tempReg = newReg "and_temp_reg"
+      let code1 = compileExp e1 vtable t1
+      let code2 = compileExp e2 vtable t2
+      let falseLabel = newLab "and_false"
+      let endLabel = newLab "and_end"
+      code1 @ code2 @
         [ BEQ (t1, Rzero, falseLabel)        // If e1 is false, jump to falseLabel
         ; BEQ (t2, Rzero, falseLabel)        // If e2 is false, jump to falseLabel
-        ; LI (place, 1);                     // If both e1 and e2 are true, set result to true
-        ; J endLabel;                        // Jump to endLabel
-        ; LABEL falseLabel;                  // Label for false case
+        ; LI (place, 1)                     // If both e1 and e2 are true, set result to true
+        ; J endLabel                        // Jump to endLabel
+        ; LABEL falseLabel                  // Label for false case
         ; LI (place, 0)                      // Set the result to false
         ; LABEL endLabel                     // Label for end of function
         ]
 
   | Or (e1, e2, pos) ->
-    let t1 = newReg "or_temp_1"
-    let t2 = newReg "or_temp_2"
-    let r1 = newReg "or_one"
-    let code1 = compileExp e1 vtable t1
-    let code2 = compileExp e2 vtable t2
-    let trueLabel = newLab "or_true"
-    let endLabel = newLab "or_end"
-    code1 @ code2 @
+      let t1 = newReg "or_temp_1"
+      let t2 = newReg "or_temp_2"
+      let r1 = newReg "or_one"
+      let code1 = compileExp e1 vtable t1
+      let code2 = compileExp e2 vtable t2
+      let trueLabel = newLab "or_true"
+      let endLabel = newLab "or_end"
+      code1 @ code2 @
         [ LI (r1, 1)                        // Load 1 into r1
         ; BEQ (t1, r1, trueLabel)           // If e1 is true (equal to r1), jump to trueLabel
         ; BEQ (t2, r1, trueLabel)           // If e2 is true (equal to r1), jump to trueLabel
@@ -391,9 +391,8 @@ let rec compileExp  (e      : TypedExp)
         ; J endLabel                        // Jump to endLabel
         ; LABEL trueLabel                   // Label for true case
         ; LI (place, 1)                     // Set the result to true
-        ; LABEL endLabel                      // Label for end of function
-        ]
-     
+        ; LABEL endLabel                    // Label for end of function
+        ] 
 
   (* Indexing:
      1. generate code to compute the index

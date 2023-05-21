@@ -114,13 +114,14 @@ rule Token = parse
   | '<'                   { Parser.LTH    (getPos lexbuf) }
   | '('                   { Parser.LPAR   (getPos lexbuf) }
   | ')'                   { Parser.RPAR   (getPos lexbuf) }
-  | '['                   { Parser.LBRACKET (getPos lexbuf) }
-  | ']'                   { Parser.RBRACKET (getPos lexbuf) }
+  | '['                   { Parser.LBRACKET (getPos lexbuf)}
+  | ']'                   { Parser.RBRACKET (getPos lexbuf)}
   | '{'                   { Parser.LCURLY (getPos lexbuf) }
   | '}'                   { Parser.RCURLY (getPos lexbuf) }
   | ','                   { Parser.COMMA  (getPos lexbuf) }
-  | '~'                   { Parser.NEGATE (getPos lexbuf)  }
-  | "||"                  { Parser.OR (getPos lexbuf)  }
-  | "&&"                  { Parser.AND (getPos lexbuf)  }
+  | '~'                   { Parser.NEGATE (getPos lexbuf) }
+  | "||"                  { Parser.OR     (getPos lexbuf) }
+  | "&&"                  { Parser.AND    (getPos lexbuf) }
+  | ';'                   { Parser.SEMICOLON (getPos lexbuf)}     // Parser.IN ?
   | eof                   { Parser.EOF    (getPos lexbuf) }
   | _                     { lexerError lexbuf "Illegal symbol in input" }

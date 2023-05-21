@@ -178,16 +178,16 @@ let rec evalExp (e : UntypedExp, vtab : VarTable, ftab : FunTable) : Value =
         | _ -> reportWrongType "left operand of &&" Bool res1 (expPos e1)
 
   | Not (e, pos) ->
-    let res = evalExp(e, vtab, ftab)
-    match res with
+      let res = evalExp(e, vtab, ftab)
+      match res with
         | BoolVal b -> BoolVal (not b)                                 // If e1 is a boolean, flip its value
         | _ -> reportWrongType "operand of not" Bool res (expPos e)  // If e1 is not a boolean, report an error
 
   | Negate(e, pos) ->
-    let res = evalExp(e, vtab, ftab)
-    match res with
-    | IntVal n -> IntVal (-n)
-    | _ -> reportWrongType "operand of negate" Int res (expPos e)
+         let res = evalExp(e, vtab, ftab)
+         match res with
+           | IntVal n -> IntVal (-n)
+           | _ -> reportWrongType "operand of negate" Int res (expPos e)
 
   | Equal(e1, e2, pos) ->
         let r1 = evalExp(e1, vtab, ftab)
