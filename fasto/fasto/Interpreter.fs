@@ -264,15 +264,21 @@ let rec evalExp (e : UntypedExp, vtab : VarTable, ftab : FunTable) : Value =
          under predicate `p`, i.e., `p(a) = true`;
        - create an `ArrayVal` from the (list) result of the previous step.
   *)
-  | Filter (p, arr, _, pos) ->
+  | Filter (p, arrexp, _, pos) ->
         let farg_ret_type = rtpFunArg p ftab pos
-        let arrres = evalExp(arr, vtab, ftab)
+        let resa = evalExp(arrexp, vtab, ftab)
         match farg_ret_type with
         | Bool _     ->
-            match arrres with
-            | ArrayVal (arr,tp1) -> failwith "bruh"
-            | otherwise          -> reportNonArray "2nd argument of \"filter\"" arrres pos
-        | otherwise  -> raise (MyError ("Predicate of \"filter\" returned wrong type", pos)) // TODO: update error
+            match resa with
+            | ArrayVal (arrval, tp1) -> 
+                  let extractBool (value: Value) : bool =
+                        match value with
+                        | BoolVal b -> b
+                        | _         -> false
+                  let farr = List.filter (fun x -> extractBool (evalFunArg (p, vtab, ftab, pos, [x]))) arrval
+                  ArrayVal ((farr), tp1)
+            | otherwise              -> reportNonArray "2nd argument of \"filter\"" resa pos
+        | otherwise  -> raise (MyError ("Predicate of \"filter\" returned wrong type", pos)) // TODO: update error - Viggo
 
   (* TODO project task 2: `scan(f, ne, arr)`
      Implementation similar to reduce, except that it produces an array
