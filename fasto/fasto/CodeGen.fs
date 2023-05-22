@@ -252,7 +252,7 @@ let rec compileExp  (e      : TypedExp)
   | Not (e, pos) ->
     let t = newReg "not_temp"
     let code = compileExp e vtable t
-    let notCode = [XORI (place, t, -1)]     //toggle all the bits of the source register; -1=1111 1111 1111
+    let notCode = [XORI (place, t, -1)]         //toggle all the bits of the source register; -1=1111 1111 1111
     code @ notCode
 
   | Negate (e, pos) ->
@@ -260,15 +260,6 @@ let rec compileExp  (e      : TypedExp)
     let code = compileExp e vtable t
     let negationCode = [SUB (place, Rzero, t)]   // Subtract the value from zero to negate it
     code @ negationCode
-  
-  (* Another implementation of integer negation
-  | Negate (e, pos) ->
-    let t = newReg "negate_temp"
-    let code = compileExp e vtable t
-    let complementCode = [XORI (t, t, -1)]      // Bitwise complement of the value
-    let negationCode = [ADDI (place, t, 1)]     // Add 1 to the complemented value
-    code @ negationCode
-*)
 
   | Let (dec, e1, pos) ->
       let (code1, vtable1) = compileDec dec vtable
