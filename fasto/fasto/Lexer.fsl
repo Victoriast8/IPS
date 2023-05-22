@@ -1,11 +1,4 @@
 ////////////////////////////////////////////////////////////////////
-// TODO: project task 1 
-//   implement lexer tokens for the new operators: 
-//   multiplication (*), division (/), numerical negation (~), 
-//   logical negation (not), logical and (&&), logical or (||),
-//   boolean literals (true, false), semicolon (;)
-//
-//
 // TODO: project task 2 
 //   implement lexer tokens (keywords) for replicate, filter, scan 
 //
@@ -65,6 +58,8 @@ let keyword (s, pos) =
        | "not"          -> Parser.NOT pos
        | "and"          -> Parser.AND pos
        | "or"           -> Parser.OR pos
+       | "true"         -> Parser.TRUE pos
+       | "false"        -> Parser.FALSE pos
 
 
 (* specials: *)
@@ -104,6 +99,7 @@ rule Token = parse
                             let str1 = str0.Substring (1, (String.length str0) - 2)
                             Parser.STRINGLIT (AbSyn.fromCString str1, getPos lexbuf)
                           }
+                    
   | '+'                   { Parser.PLUS   (getPos lexbuf) }
   | '-'                   { Parser.MINUS  (getPos lexbuf) }
   | '*'                   { Parser.TIMES  (getPos lexbuf) }
@@ -122,6 +118,6 @@ rule Token = parse
   | '~'                   { Parser.NEGATE (getPos lexbuf) }
   | "||"                  { Parser.OR     (getPos lexbuf) }
   | "&&"                  { Parser.AND    (getPos lexbuf) }
-  | ';'                   { Parser.SEMICOLON (getPos lexbuf)}     // Parser.IN ?
+  | ';'                   { Parser.SEMICOLON (getPos lexbuf)}    
   | eof                   { Parser.EOF    (getPos lexbuf) }
   | _                     { lexerError lexbuf "Illegal symbol in input" }

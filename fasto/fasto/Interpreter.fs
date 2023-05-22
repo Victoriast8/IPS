@@ -149,7 +149,7 @@ let rec evalExp (e : UntypedExp, vtab : VarTable, ftab : FunTable) : Value =
       match (res1, res2) with
         | (IntVal n1, IntVal n2) -> 
             if n2 = 0 then 
-                  failwith "Error: Division by zero" 
+                  raise (MyError("Error: Division by zero", pos))
             else 
                   IntVal (n1 / n2)
         | (IntVal _, _) -> reportWrongType "right operand of /" Int res2 (expPos e2)
@@ -158,8 +158,8 @@ let rec evalExp (e : UntypedExp, vtab : VarTable, ftab : FunTable) : Value =
   | And (e1, e2, pos) ->
       let res1 = evalExp(e1, vtab, ftab)
       match res1 with
-        | BoolVal false -> BoolVal false              // If e1 is false, return false without evaluating e2
-        | BoolVal true ->                             // If e1 is true, then evaluate e2
+        | BoolVal false -> BoolVal false                      // If e1 is false, return false without evaluating e2
+        | BoolVal true ->                                     // If e1 is true, then evaluate e2
             let res2 = evalExp(e2, vtab, ftab)
             match res2 with
               | BoolVal b -> BoolVal b                  // Return the result of e2
@@ -169,8 +169,8 @@ let rec evalExp (e : UntypedExp, vtab : VarTable, ftab : FunTable) : Value =
   | Or (e1, e2, position) ->
       let res1 = evalExp(e1, vtab, ftab)
       match res1 with
-        | BoolVal true -> BoolVal true                  // If e1 is true, return true without evaluating e2
-        | BoolVal false ->                              // If e1 is false, then evaluate e2
+        | BoolVal true -> BoolVal true                        // If e1 is true, return true without evaluating e2
+        | BoolVal false ->                                    // If e1 is false, then evaluate e2
             let res2 = evalExp(e2, vtab, ftab)
             match res2 with 
               | BoolVal b -> BoolVal b
