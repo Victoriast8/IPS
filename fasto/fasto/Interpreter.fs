@@ -290,8 +290,8 @@ let rec evalExp (e : UntypedExp, vtab : VarTable, ftab : FunTable) : Value =
         let resa = evalExp(arrexp, vtab, ftab)
         match resa with
         | ArrayVal (arrval, tp1) -> 
-            let slst = List.scan (fun acc x -> evalFunArg (farg, vtab, ftab, pos, [acc;x])) resn arrval // TODO: unsure if this works. Test it
-            ArrayVal (slst, tp1)
+            let slst = List.scan (fun acc x -> evalFunArg (farg, vtab, ftab, pos, [acc;x])) resn arrval
+            ArrayVal (slst[1..], tp1)
         | otherwise              -> reportNonArray "3rd argument of \"filter\"" resa pos
 
   | Read (t,p) ->
