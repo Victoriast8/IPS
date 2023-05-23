@@ -306,9 +306,6 @@ and checkExp  (ftab : FunTable)
       if t1 <> Int then
         reportTypeWrong "argument of replicate" Int t1 pos
       (Array t2, Replicate (e1, e2, t2, pos))
-      
-
-        failwith "Unimplemented type check of replicate"
 
     (* TODO project task 2: Hint for `filter(f, arr)`
         Look into the type-checking lecture slides for the type rule of `map`
@@ -327,16 +324,16 @@ and checkExp  (ftab : FunTable)
               | _ -> reportTypeWrongKind "third argument of filter" "array" arr_type pos
       let (f', f_res_type, f_arg_type) =
             match checkFunArg ftab vtab pos func with
-              | (f, res, [a1]) ->
-                  if res <> Bool then
-                     reportTypeWrongKind "function is filter does not return bool" f pos
-                  (f, res, a1)
-              | (_, res, args) ->
+            | (f, res, [a1]) ->
+                if res <> Bool then
+                  reportTypeWrongKind "function is filter does not return" "bool" res pos
+                (f, res, a1)
+            | (_, res, args) ->
                   reportArityWrong "operation in filter" 1 (args,res) pos
-        if elem_type <> f_arg_type then
-              reportTypesDifferent "operation and array-element types in filter"
-                                   f_arg_type elem_type pos
-        (Array elem_Type, Filter (f', arr_dec, elem_type, pos))
+      if elem_type <> f_arg_type then
+            reportTypesDifferent "operation and array-element types in filter"
+                                 f_arg_type elem_type pos
+      (Array elem_type, Filter (f', arr_dec, elem_type, pos))
 
 
     (* TODO project task 2: `scan(f, ne, arr)`
