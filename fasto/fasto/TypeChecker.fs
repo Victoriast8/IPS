@@ -360,14 +360,14 @@ and checkExp  (ftab : FunTable)
                                           a1 res pos
                   (f', res)
               | (_, res, args) ->
-                  reportArityWrong "operation in reduce" 2 (args,res) pos
-        if arr_type <> f_argres_type then
+                  reportArityWrong "operation in scan" 2 (args,res) pos
+        if test_arr_type <> f_argres_type then
           reportTypesDifferent "operation and array type in scan"
-                               f_argres_type arr_type pos
+                               f_argres_type test_arr_type pos
         if n_type <> f_argres_type then
           reportTypesDifferent "operation and array-element types in scan"
                                f_argres_type n_type pos
-        (f_argres_type, Reduce (f', n_dec, arr_dec, arr_type, pos))
+        (Array test_arr_type, Scan (f', n_dec, arr_dec, test_arr_type, pos))
 
 and checkFunArg  (ftab : FunTable)
                  (vtab : VarTable)
