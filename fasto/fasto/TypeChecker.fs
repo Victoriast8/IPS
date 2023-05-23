@@ -333,10 +333,10 @@ and checkExp  (ftab : FunTable)
                   (f, res, a1)
               | (_, res, args) ->
                   reportArityWrong "operation in filter" 1 (args,res) pos
-            if elem_type <> f_arg_type then
+        if elem_type <> f_arg_type then
               reportTypesDifferent "operation and array-element types in filter"
                                    f_arg_type elem_type pos
-            (Array elem_Type, Filter (f', arr_dec, elem_type, pos))
+        (Array elem_Type, Filter (f', arr_dec, elem_type, pos))
 
 
     (* TODO project task 2: `scan(f, ne, arr)`
