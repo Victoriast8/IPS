@@ -168,8 +168,9 @@ let rec compileExp  (e      : TypedExp)
       [ LI (place, n) ] (* assembler will generate appropriate
                            instruction sequence for any value n *)
   | Constant (BoolVal p, _) ->
-      (* TODO project task 1: represent `true`/`false` values as `1`/`0` *)
-      failwith "Unimplemented code generation of boolean constants"
+      match p with
+      | true  -> [ LI (place, 1) ]
+      | false -> [ LI (place, 0) ]
   | Constant (CharVal c, pos) -> [ LI (place, int c) ]
 
   (* Create/return a label here, collect all string literals of the program
@@ -576,40 +577,53 @@ let rec compileExp  (e      : TypedExp)
         If `n` is less than `0` then remember to terminate the program with
         an error -- see implementation of `iota`.
   *)
-  | Replicate (n_exp, a_exp, tp, pos) ->
-      failwith "bruh"
-      // let size_reg = newReg "size" (* size of input/output array *)
-      // let arr_reg  = newReg "arr"  (* address of array *)
-      // let addr_reg = newReg "addrg" (* address of element in new array *)
-      // let i_reg = newReg "i"
-      // et arr_code = compileExp arr_exp vtable arr_reg
+  | Replicate (n_exp, a_exp, tp, (pos1, _)) ->
+      let size_reg = newReg "size" (* size of input/output array *)
+      let a_reg    = newReg "a"    (* value of expr a *)
+      let addr_reg = newReg "addr" (* address of element in new array *)
+      let i_reg    = newReg "i"
 
-      // let init_regs = [ ADDI (addr_reg, place, 4)
-      //                 ; MV (i_reg, Rzero)
-      //                 ; ADDI (elem_reg, arr_reg, 4)
-      //                 ]
+      (* Evaluate expressions into their respective registers *)
+      let get_replicates = compileExp n_exp vtable size_reg
+      let eval_a_exp = compileExp a_exp vtable a_reg
+      let elem_size = getElemSize tp
 
-      // let loop_beg = newLab "loop_beg"
-      // let loop_end = newLab "loop_end"
-      // let loop_header = [ LABEL (loop_beg)
-      //                   ; BGE (i_reg, size_reg, loop_end)
-      //                   ]
-      // let loop_replicate = [ Store elem_size (elem_reg, addr_reg, 0)
-      //                      ; ADDI (addr_reg, addr_reg, elemSizeToInt elem_size)
-      //                      ]
-      // let loop_footer =
-      //         [ ADDI (i_reg, i_reg, 1)
-      //         ; J loop_beg
-      //         ; LABEL loop_end
-      //         ]
+      let safe_lab = newLab "safe"
+      let checksize = [ BGE (size_reg, Rzero, safe_lab)
+                      ; LI (Ra0, pos1)
+                      ; LA (Ra1, "m.BadSize")
+                      ; J "p.RuntimeError"
+                      ; LABEL (safe_lab)
+                      ]
 
-      // arr_code
-      //  @ get_size
-      //  @ dynalloc (size_reg, place, ret_type)
-      //  @ init_regs
-      //  @ loop_header
-      //  @ loop_replicate
-      //  @ loop_footer
+      let init_regs = [ ADDI (addr_reg, place, 4)
+                      ; MV (i_reg, Rzero)
+                      ]
+
+      let loop_beg = newLab "loop_beg"
+      let loop_end = newLab "loop_end"
+      let loop_header = [ LABEL (loop_beg)
+                        ; BGE (i_reg, size_reg, loop_end)
+                        ]
+
+      let loop_replicate = [ Store elem_size (a_reg, addr_reg, 0)
+                           ; ADDI (addr_reg, addr_reg, elemSizeToInt elem_size)
+                           ]
+
+      let loop_footer =
+              [ ADDI (i_reg, i_reg, 1)
+              ; J loop_beg
+              ; LABEL loop_end
+              ]
+
+      get_replicates
+       @ eval_a_exp
+       @ checksize
+       @ dynalloc (size_reg, place, tp)
+       @ init_regs
+       @ loop_header
+       @ loop_replicate
+       @ loop_footer
 
   (* TODO project task 2: see also the comment to replicate.
      (a) `filter(f, arr)`:  has some similarity with the implementation of map.
@@ -627,7 +641,7 @@ let rec compileExp  (e      : TypedExp)
          `SW(counter_reg, place, 0)` instruction.
   *)
   | Filter (f, arr, tp, pos) ->
-    failwith "bruh"
+    failwith "not impl"
     // let size_reg = newReg "size" (* size of input/output array *)
     // let arr_reg  = newReg "arr"  (* address of array *)
     // let input_elem_reg = newReg "elem" (* address of current input element *)
