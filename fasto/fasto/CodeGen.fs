@@ -168,8 +168,9 @@ let rec compileExp  (e      : TypedExp)
       [ LI (place, n) ] (* assembler will generate appropriate
                            instruction sequence for any value n *)
   | Constant (BoolVal p, _) ->
-      (* TODO project task 1: represent `true`/`false` values as `1`/`0` *)
-      failwith "Unimplemented code generation of boolean constants"
+      match p with
+      | true  -> [ LI (place, 1) ]
+      | false -> [ LI (place, 0) ]
   | Constant (CharVal c, pos) -> [ LI (place, int c) ]
 
   (* Create/return a label here, collect all string literals of the program
@@ -230,24 +231,36 @@ let rec compileExp  (e      : TypedExp)
       let code2 = compileExp e2 vtable t2
       code1 @ code2 @ [SUB (place,t1,t2)]
 
-  (* TODO project task 1:
-     Look in `AbSyn.fs` for the expression constructors `Times`, ...
-     `Times` is very similar to `Plus`/`Minus`.
-     For `Divide`, you may ignore division by zero for a quick first
-     version, but remember to come back and clean it up later.
-     `Not` and `Negate` are simpler; you can use `XORI` for `Not`
-  *)
-  | Times (_, _, _) ->
-      failwith "Unimplemented code generation of multiplication"
+  | Times (e1, e2, pos) ->
+    let t1 = newReg "times_L"
+    let t2 = newReg "times_R"
+    let code1 = compileExp e1 vtable t1
+    let code2 = compileExp e2 vtable t2
+    code1 @ code2 @ [MUL (place, t1, t2)]
 
-  | Divide (_, _, _) ->
-      failwith "Unimplemented code generation of division"
+  | Divide (e1, e2, pos) ->
+    let t1 = newReg "divide_L"
+    let t2 = newReg "divide_R"
+    let code1 = compileExp e1 vtable t1
+    let code2 = compileExp e2 vtable t2
+    let zeroDivisorLabel = newLab "zero_divisor"
+    let checkZero = [BEQ (t2, Rzero, zeroDivisorLabel)]
+    let division = [DIV (place, t1, t2)]
+    let zeroDivisorComment = [COMMENT "Division by zero error handling"]
+    let zeroDivisorError = [LABEL zeroDivisorLabel] @ zeroDivisorComment
+    code1 @ code2 @ checkZero @ division @ zeroDivisorError 
 
-  | Not (_, _) ->
-      failwith "Unimplemented code generation of not"
+  | Not (e, pos) ->
+    let t = newReg "not_temp"
+    let code = compileExp e vtable t
+    let notCode = [XORI (place, t, -1)]         //toggle all the bits of the source register; -1=1111 1111 1111
+    code @ notCode
 
-  | Negate (_, _) ->
-      failwith "Unimplemented code generation of negate"
+  | Negate (e, pos) ->
+    let t = newReg "negate_temp"
+    let code = compileExp e vtable t
+    let negationCode = [SUB (place, Rzero, t)]   // Subtract the value from zero to negate it
+    code @ negationCode
 
   | Let (dec, e1, pos) ->
       let (code1, vtable1) = compileDec dec vtable
@@ -336,18 +349,42 @@ let rec compileExp  (e      : TypedExp)
       let code2 = compileExp e2 vtable t2
       code1 @ code2 @ [SLT (place,t1,t2)]
 
-  (* TODO project task 1:
-        Look in `AbSyn.fs` for the expression constructors of `And` and `Or`.
-        The implementation of `And` and `Or` is more complicated than `Plus`
-        because you need to ensure the short-circuit semantics, e.g.,
-        in `e1 || e2` if the execution of `e1` will evaluate to `true` then
-        the code of `e2` must not be executed. Similarly for `And` (&&).
-  *)
-  | And (_, _, _) ->
-      failwith "Unimplemented code generation of &&"
+  | And (e1, e2, pos) ->
+      let t1 = newReg "and_temp_1"
+      let t2 = newReg "and_temp_2"
+      let tempReg = newReg "and_temp_reg"
+      let code1 = compileExp e1 vtable t1
+      let code2 = compileExp e2 vtable t2
+      let falseLabel = newLab "and_false"
+      let endLabel = newLab "and_end"
+      code1 @ code2 @
+        [ BEQ (t1, Rzero, falseLabel)        // If e1 is false, jump to falseLabel
+        ; BEQ (t2, Rzero, falseLabel)        // If e2 is false, jump to falseLabel
+        ; LI (place, 1)                     // If both e1 and e2 are true, set result to true
+        ; J endLabel                        // Jump to endLabel
+        ; LABEL falseLabel                  // Label for false case
+        ; LI (place, 0)                      // Set the result to false
+        ; LABEL endLabel                     // Label for end of function
+        ]
 
-  | Or (_, _, _) ->
-      failwith "Unimplemented code generation of ||"
+  | Or (e1, e2, pos) ->
+      let t1 = newReg "or_temp_1"
+      let t2 = newReg "or_temp_2"
+      let r1 = newReg "or_one"
+      let code1 = compileExp e1 vtable t1
+      let code2 = compileExp e2 vtable t2
+      let trueLabel = newLab "or_true"
+      let endLabel = newLab "or_end"
+      code1 @ code2 @
+        [ LI (r1, 1)                        // Load 1 into r1
+        ; BEQ (t1, r1, trueLabel)           // If e1 is true (equal to r1), jump to trueLabel
+        ; BEQ (t2, r1, trueLabel)           // If e2 is true (equal to r1), jump to trueLabel
+        ; LI (place, 0)                     // If both e1 and e2 are false, set result to false
+        ; J endLabel                        // Jump to endLabel
+        ; LABEL trueLabel                   // Label for true case
+        ; LI (place, 1)                     // Set the result to true
+        ; LABEL endLabel                    // Label for end of function
+        ] 
 
   (* Indexing:
      1. generate code to compute the index
@@ -540,8 +577,53 @@ let rec compileExp  (e      : TypedExp)
         If `n` is less than `0` then remember to terminate the program with
         an error -- see implementation of `iota`.
   *)
-  | Replicate (_, _, _, _) ->
-      failwith "Unimplemented code generation of replicate"
+  | Replicate (n_exp, a_exp, tp, (pos1, _)) ->
+      let size_reg = newReg "size" (* size of input/output array *)
+      let a_reg    = newReg "a"    (* value of expr a *)
+      let addr_reg = newReg "addr" (* address of element in new array *)
+      let i_reg    = newReg "i"
+
+      (* Evaluate expressions into their respective registers *)
+      let get_replicates = compileExp n_exp vtable size_reg
+      let eval_a_exp = compileExp a_exp vtable a_reg
+      let elem_size = getElemSize tp
+
+      let safe_lab = newLab "safe"
+      let checksize = [ BGE (size_reg, Rzero, safe_lab)
+                      ; LI (Ra0, pos1)
+                      ; LA (Ra1, "m.BadSize")
+                      ; J "p.RuntimeError"
+                      ; LABEL (safe_lab)
+                      ]
+
+      let init_regs = [ ADDI (addr_reg, place, 4)
+                      ; MV (i_reg, Rzero)
+                      ]
+
+      let loop_beg = newLab "loop_beg"
+      let loop_end = newLab "loop_end"
+      let loop_header = [ LABEL (loop_beg)
+                        ; BGE (i_reg, size_reg, loop_end)
+                        ]
+
+      let loop_replicate = [ Store elem_size (a_reg, addr_reg, 0)
+                           ; ADDI (addr_reg, addr_reg, elemSizeToInt elem_size)
+                           ]
+
+      let loop_footer =
+              [ ADDI (i_reg, i_reg, 1)
+              ; J loop_beg
+              ; LABEL loop_end
+              ]
+
+      get_replicates
+       @ eval_a_exp
+       @ checksize
+       @ dynalloc (size_reg, place, tp)
+       @ init_regs
+       @ loop_header
+       @ loop_replicate
+       @ loop_footer
 
   (* TODO project task 2: see also the comment to replicate.
      (a) `filter(f, arr)`:  has some similarity with the implementation of map.
@@ -558,9 +640,60 @@ let rec compileExp  (e      : TypedExp)
          counter computed in step (c). You do this of course with a
          `SW(counter_reg, place, 0)` instruction.
   *)
-  | Filter (_, _, _, _) ->
-      failwith "Unimplemented code generation of filter"
+  | Filter (f, arr_exp, tp, pos) ->
+      let size_reg = newReg "size" (* size of input array *)
+      let arr_reg  = newReg "arr"  (* address of input array *)
+      let inc_reg  = newReg "inc"  (* incrementer / counter *)
+      let addr_reg = newReg "addr" (* address of output array *)
+      let i_reg    = newReg "i"    (* iterator *)
+      let tmp_reg  = newReg "tmp"  (* temporary register *)
+      let res_reg  = newReg "res"  (* holds current input element *)
+      let elem_size = getElemSize tp
 
+      let arr_code = compileExp arr_exp vtable arr_reg
+
+      let get_size = [ LW (size_reg, arr_reg, 0) ] (* size of input array *)
+
+      let init_regs = [ ADDI (addr_reg, place, 4)
+                      ; MV (i_reg, Rzero)
+                      ; MV (inc_reg, Rzero)
+                      ; ADDI (arr_reg, arr_reg, 4)
+                      ]
+
+      let loop_beg = newLab "loop_beg"
+      let fil_false = newLab "fil_false"
+      let loop_end = newLab "loop_end"
+
+      let loop_header = [ LABEL (loop_beg)
+                        ; BGE (i_reg, size_reg, loop_end)
+                        ; Load elem_size (res_reg, arr_reg, 0)
+                        ]
+
+      let apply_code =
+          applyFunArg (f, [res_reg], vtable, tmp_reg, pos)
+
+      let loop_filter = [ BEQ (tmp_reg, Rzero, fil_false)
+                        ; SW (res_reg, addr_reg, 0)
+                        ; ADDI (addr_reg, addr_reg, elemSizeToInt elem_size)
+                        ; ADDI (inc_reg, inc_reg, 1)
+                        ]
+
+      let loop_footer = [ LABEL (fil_false)
+                        ; ADDI (arr_reg, arr_reg, elemSizeToInt elem_size)
+                        ; ADDI (i_reg, i_reg, 1)
+                        ; J loop_beg
+                        ; LABEL (loop_end)
+                        ; SW (inc_reg, place, 0) (* update the size of the result array *)
+                        ]
+
+      arr_code
+        @ get_size
+        @ dynalloc (size_reg, place, tp)
+        @ init_regs
+        @ loop_header
+        @ apply_code
+        @ loop_filter
+        @ loop_footer
   (* TODO project task 2: see also the comment to replicate.
      `scan(f, ne, arr)`: you can inspire yourself from the implementation of
         `reduce`, but in the case of `scan` you will need to also maintain

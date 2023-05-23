@@ -134,28 +134,61 @@ let rec evalExp (e : UntypedExp, vtab : VarTable, ftab : FunTable) : Value =
           | (IntVal n1, IntVal n2) -> IntVal (n1-n2)
           | (IntVal _, _) -> reportWrongType "right operand of -" Int res2 (expPos e2)
           | (_, _) -> reportWrongType "left operand of -" Int res1 (expPos e1)
-  (* TODO: project task 1:
-     Look in `AbSyn.fs` for the arguments of the `Times`
-     (`Divide`,...) expression constructors.
-        Implementation similar to the cases of Plus/Minus.
-        Try to pattern match the code above.
-        For `Divide`, remember to check for attempts to divide by zero.
-        For `And`/`Or`: make sure to implement the short-circuit semantics,
-        e.g., `And (e1, e2, pos)` should not evaluate `e2` if `e1` already
-              evaluates to false.
-  *)
-  | Times(_, _, _) ->
-        failwith "Unimplemented interpretation of multiplication"
-  | Divide(_, _, _) ->
-        failwith "Unimplemented interpretation of division"
-  | And (_, _, _) ->
-        failwith "Unimplemented interpretation of &&"
-  | Or (_, _, _) ->
-        failwith "Unimplemented interpretation of ||"
-  | Not(_, _) ->
-        failwith "Unimplemented interpretation of not"
-  | Negate(_, _) ->
-        failwith "Unimplemented interpretation of negate"
+  
+  | Times(e1, e2, pos) ->
+       let res1 = evalExp(e1, vtab, ftab)
+       let res2 = evalExp(e2, vtab, ftab)
+       match (res1, res2) with
+         | (IntVal n1, IntVal n2) -> IntVal (n1 * n2)
+         | (IntVal _, _) -> reportWrongType "right operand of *" Int res2 (expPos e2)
+         | (_, _) -> reportWrongType "left operand of *" Int res1 (expPos e1)
+
+  | Divide(e1, e2, pos) ->
+      let res1 = evalExp(e1, vtab, ftab)
+      let res2 = evalExp(e2, vtab, ftab)
+      match (res1, res2) with
+        | (IntVal n1, IntVal n2) -> 
+            if n2 = 0 then 
+                  raise (MyError("Error: Division by zero", pos))
+            else 
+                  IntVal (n1 / n2)
+        | (IntVal _, _) -> reportWrongType "right operand of /" Int res2 (expPos e2)
+        | (_, _) -> reportWrongType "left operand of /" Int res1 (expPos e1)
+
+  | And (e1, e2, pos) ->
+      let res1 = evalExp(e1, vtab, ftab)
+      match res1 with
+        | BoolVal false -> BoolVal false                      // If e1 is false, return false without evaluating e2
+        | BoolVal true ->                                     // If e1 is true, then evaluate e2
+            let res2 = evalExp(e2, vtab, ftab)
+            match res2 with
+              | BoolVal b -> BoolVal b                  // Return the result of e2
+              | _ -> reportWrongType "right operand of &&" Bool res2 (expPos e2)
+        | _ -> reportWrongType "left operand of &&" Bool res1 (expPos e1)
+
+  | Or (e1, e2, position) ->
+      let res1 = evalExp(e1, vtab, ftab)
+      match res1 with
+        | BoolVal true -> BoolVal true                        // If e1 is true, return true without evaluating e2
+        | BoolVal false ->                                    // If e1 is false, then evaluate e2
+            let res2 = evalExp(e2, vtab, ftab)
+            match res2 with 
+              | BoolVal b -> BoolVal b
+              | _ -> reportWrongType "right operand of &&" Bool res2 (expPos e2)
+        | _ -> reportWrongType "left operand of &&" Bool res1 (expPos e1)
+
+  | Not (e, pos) ->
+      let res = evalExp(e, vtab, ftab)
+      match res with
+        | BoolVal b -> BoolVal (not b)                                 // If e1 is a boolean, flip its value
+        | _ -> reportWrongType "operand of not" Bool res (expPos e)  // If e1 is not a boolean, report an error
+
+  | Negate(e, pos) ->
+         let res = evalExp(e, vtab, ftab)
+         match res with
+           | IntVal n -> IntVal (-n)
+           | _ -> reportWrongType "operand of negate" Int res (expPos e)
+
   | Equal(e1, e2, pos) ->
         let r1 = evalExp(e1, vtab, ftab)
         let r2 = evalExp(e2, vtab, ftab)
@@ -248,13 +281,13 @@ let rec evalExp (e : UntypedExp, vtab : VarTable, ftab : FunTable) : Value =
          the value of `a`; otherwise raise an error (containing
          a meaningful message).
   *)
-  | Replicate (nexp, aexp, tp, pos) ->
-        let resn = evalExp(nexp, vtab, ftab)
-        let resa = evalExp(aexp, vtab, ftab)
-        match resn with
+  | Replicate (n_exp, a_exp, tp, pos) ->
+        let res_n = evalExp(n_exp, vtab, ftab)
+        let res_a = evalExp(a_exp, vtab, ftab)
+        match res_n with
         | IntVal n when n >= 0 -> 
-            ArrayVal ((List.replicate n resa), (valueType resa)) // TODO: 2nd argument should be either Int or Array, not some static type. Also throw right error.
-        | otherwise            -> failwith "Replicate does not create negative arrays" // TODO: update error
+            ArrayVal ((List.replicate n res_a), (valueType res_a))
+        | otherwise            -> failwith "Replicate does not create negative arrays" // TODO: update error - Viggo
 
   (* TODO project task 2: `filter(p, arr)`
        pattern match the implementation of map:
@@ -278,7 +311,7 @@ let rec evalExp (e : UntypedExp, vtab : VarTable, ftab : FunTable) : Value =
                   let farr = List.filter (fun x -> extractBool (evalFunArg (p, vtab, ftab, pos, [x]))) arrval
                   ArrayVal ((farr), tp1)
             | otherwise              -> reportNonArray "2nd argument of \"filter\"" resa pos
-        | otherwise  -> raise (MyError ("Predicate of \"filter\" returned wrong type", pos)) // TODO: update error
+        | otherwise  -> raise (MyError ("Predicate of \"filter\" returned wrong type", pos)) // TODO: update error - Viggo
 
   (* TODO project task 2: `scan(f, ne, arr)`
      Implementation similar to reduce, except that it produces an array

@@ -125,27 +125,33 @@ and checkExp  (ftab : FunTable)
         let (e1_dec, e2_dec) = checkBinOp ftab vtab (pos, Int, e1, e2)
         (Int, Minus (e1_dec, e2_dec, pos))
 
-    (* TODO project task 1:
-        Implement by pattern matching Plus/Minus above.
-        See `AbSyn.fs` for the expression constructors of `Times`, ...
-    *)
     | Times (e1, e2, pos) ->
-        failwith "Unimplemented type check of multiplication"
+        let (e1_dec, e2_dec) = checkBinOp ftab vtab (pos, Int, e1, e2)
+        (Int, Times (e1_dec, e2_dec, pos))
 
-    | Divide (_, _, _) ->
-        failwith "Unimplemented type check of division"
+    | Divide (e1, e2, pos) ->
+        let (e1_dec, e2_dec) = checkBinOp ftab vtab (pos, Int, e1, e2)
+        (Int, Divide (e1_dec, e2_dec, pos))
 
-    | And (_, _, _) ->
-        failwith "Unimplemented type check of &&"
+    | And (e1, e2, pos) ->
+        let (e1_dec, e2_dec) = checkBinOp ftab vtab (pos, Bool, e1, e2)
+        (Bool, And (e1_dec, e2_dec, pos))
 
-    | Or (_, _, _) ->
-        failwith "Unimplemented type check of ||"
+    | Or (e1, e2, pos) ->
+        let (e1_dec, e2_dec) = checkBinOp ftab vtab (pos, Bool, e1, e2)
+        (Bool, Or (e1_dec, e2_dec, pos))
+    
+    | Not (e, pos) ->
+        let (e_type, e_dec) = checkExp ftab vtab e
+        if e_type <> Bool then
+            reportTypeWrong"Expected boolean expression in logical negation" Bool e_type pos
+        (Bool, Not (e_dec, pos))
 
-    | Not (_, _) ->
-        failwith "Unimplemented type check of not"
-
-    | Negate (_, _) ->
-        failwith "Unimplemented type check of negate"
+    | Negate (e, pos) ->
+        let (e_type, e_dec) = checkExp ftab vtab e
+        if e_type <> Int then
+            reportTypeWrong "Expected integer expression in integer negation" Int e_type pos
+        (Int, Negate (e_dec, pos))
 
     (* The types for e1, e2 must be the same. The result is always a Bool. *)
     | Equal (e1, e2, pos) ->
@@ -294,8 +300,12 @@ and checkExp  (ftab : FunTable)
         - assuming `a` is of type `t` the result type
           of replicate is `[t]`
     *)
-    | Replicate (_, _, _, _) ->
-        failwith "Unimplemented type check of replicate"
+    | Replicate (e_exp1, e_exp2, _, pos) ->
+      let (t1, e1) = checkExp ftab vtab e_exp1
+      let (t2, e2) = checkExp ftab vtab e_exp2
+      if t1 <> Int then
+        reportTypeWrong "argument of replicate" Int t1 pos
+      (Array t2, Replicate (e1, e2, t2, pos))
 
     (* TODO project task 2: Hint for `filter(f, arr)`
         Look into the type-checking lecture slides for the type rule of `map`
@@ -306,8 +316,25 @@ and checkExp  (ftab : FunTable)
             - `arr` should be of type `[ta]`
             - the result of filter should have type `[tb]`
     *)
-    | Filter (_, _, _, _) ->
-        failwith "Unimplemented type check of filter"
+    | Filter (func, arr_exp, _, pos) ->
+      let (arr_type, arr_dec) = checkExp ftab vtab arr_exp
+      let elem_type =
+            match arr_type with
+              | Array t -> t
+              | _ -> reportTypeWrongKind "third argument of filter" "array" arr_type pos
+      let (f', f_res_type, f_arg_type) =
+            match checkFunArg ftab vtab pos func with
+            | (f, res, [a1]) ->
+                if res <> Bool then
+                  reportTypeWrongKind "function is filter does not return" "bool" res pos
+                (f, res, a1)
+            | (_, res, args) ->
+                  reportArityWrong "operation in filter" 1 (args,res) pos
+      if elem_type <> f_arg_type then
+            reportTypesDifferent "operation and array-element types in filter"
+                                 f_arg_type elem_type pos
+      (Array elem_type, Filter (f', arr_dec, elem_type, pos))
+
 
     (* TODO project task 2: `scan(f, ne, arr)`
         Hint: Implementation is very similar to `reduce(f, ne, arr)`.
