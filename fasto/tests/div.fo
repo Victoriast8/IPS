@@ -14,10 +14,5 @@ fun int main() =
     let result = testMul(5) in
     0
     
-   
-// This test fails because we have only only output file, and we won't 
-// know where the error comes from: from compilation or inetrpretation 
-// or elsewhere. When run: "./bin/runtests.sh -i", the interpreter error 
-// is division by zero, when run "./bin/runtests.sh", the compilation error
-// is division by zero.
+
 
