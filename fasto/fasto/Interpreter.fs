@@ -317,14 +317,14 @@ let rec evalExp (e : UntypedExp, vtab : VarTable, ftab : FunTable) : Value =
      Implementation similar to reduce, except that it produces an array
      of the same type and length to the input array `arr`.
   *)
-  | Scan (farg, ne, arr, tp, pos) ->
+  | Scan (farg, ne, arrexp, tp, pos) ->
         let farg_ret_type = rtpFunArg farg ftab pos
         let resn = evalExp(ne, vtab, ftab)
-        let resa = evalExp(arr, vtab, ftab)
+        let resa = evalExp(arrexp, vtab, ftab)
         match resa with
         | ArrayVal (arrval, tp1) -> 
-            let slst = List.scan (fun acc x -> evalFunArg (farg, vtab, ftab, pos, [acc;x])) resn arrval // TODO: unsure if this works. Test it
-            ArrayVal (slst, tp1)
+            let slst = List.scan (fun acc x -> evalFunArg (farg, vtab, ftab, pos, [acc;x])) resn arrval
+            ArrayVal (slst[1..], tp1)
         | otherwise              -> reportNonArray "3rd argument of \"filter\"" resa pos
 
   | Read (t,p) ->

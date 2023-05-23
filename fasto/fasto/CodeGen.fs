@@ -701,8 +701,55 @@ let rec compileExp  (e      : TypedExp)
         the current location of the result iterator at every iteration of
         the loop.
   *)
-  | Scan (_, _, _, _, _) ->
-      failwith "Unimplemented code generation of scan"
+  | Scan (binop, acc_exp, arr_exp, tp, pos) ->
+      let arr_reg  = newReg "arr"   (* address of array *)
+      let size_reg = newReg "size"  (* size of input array *)
+      let i_reg    = newReg "ind_var"   (* loop counter *)
+      let tmp_reg  = newReg "tmp"   (* several purposes *)
+      let addr_reg = newReg "addr"  (* current result element adress *)
+      let acc_reg  = newReg "acc"   (* accumulator *)
+      let loop_beg = newLab "loop_beg"
+      let loop_end = newLab "loop_end"
+
+      let arr_code = compileExp arr_exp vtable arr_reg
+      let get_size = [ LW(size_reg, arr_reg, 0) ]
+
+      (* Allocate memory *)
+      let alloc =
+            dynalloc (size_reg, place, tp)
+
+      (* Compile initial value into accumulator (will be updated below) *)
+      let acc_code = compileExp acc_exp vtable acc_reg
+
+      (* Set arr_reg to address of first element instead. *)
+      (* Set i_reg to 0. While i < size_reg, loop. *)
+      let loop_code =
+          [ ADDI (arr_reg, arr_reg, 4)
+          ; ADDI (addr_reg, place, 4)
+          ; MV (i_reg, Rzero)
+          ; LABEL (loop_beg)
+          ; BGE (i_reg, size_reg, loop_end)
+          ]
+      (* Load arr[i] into tmp_reg *)
+      let elem_size = getElemSize tp
+      let load_code =
+          [ Load elem_size (tmp_reg, arr_reg, 0)
+          ; ADDI (arr_reg, arr_reg, elemSizeToInt elem_size)
+          ]
+      (* place[i] := binop(accumulator, tmp_reg) *)
+      let apply_code =
+          applyFunArg(binop, [acc_reg; tmp_reg], vtable, acc_reg, pos)
+      
+      let update_regs =
+          [ Store elem_size (acc_reg, addr_reg, 0)
+          ; ADDI (addr_reg, addr_reg, elemSizeToInt elem_size)
+          ]
+
+      arr_code @ get_size @ alloc @ acc_code @ loop_code @ load_code @ apply_code @ update_regs @
+          [ ADDI(i_reg, i_reg, 1)
+          ; J loop_beg
+          ; LABEL loop_end
+          ]
 
 and applyFunArg ( ff     : TypedFunArg
                 , args   : reg list
