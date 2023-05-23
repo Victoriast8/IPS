@@ -1,12 +1,12 @@
 {
   "version": 2,
-  "dgSpecHash": "eHtPI0LP4/Jc9ZALe8+u07zhG/zzq5Kj2vtGuJnNwAkUqoo7xWzI0ZU6syzAglDm0awaHcd11TPlYn0/VYqDsw==",
+  "dgSpecHash": "cDoIeryDhUPuZO31vuQjLjbnzW2HRO6vduZScswZfqYBAAzZEmwxNFngKej/bC7Fhfme2/23NhPJdzBk/SDCig==",
   "success": true,
-  "projectFilePath": "/Users/helgarykov/Documents/IPS/IPS/fasto/Fasto/Fasto.fsproj",
+  "projectFilePath": "c:\\Users\\Victo\\Documents\\GitHub\\IPS\\fasto\\fasto\\Fasto.fsproj",
   "expectedPackageFiles": [
-    "/Users/helgarykov/.nuget/packages/fsharp.core/7.0.200/fsharp.core.7.0.200.nupkg.sha512",
-    "/Users/helgarykov/.nuget/packages/fslexyacc/10.2.0/fslexyacc.10.2.0.nupkg.sha512",
-    "/Users/helgarykov/.nuget/packages/fslexyacc.runtime/10.2.0/fslexyacc.runtime.10.2.0.nupkg.sha512"
+    "C:\\Users\\Victo\\.nuget\\packages\\fsharp.core\\7.0.200\\fsharp.core.7.0.200.nupkg.sha512",
+    "C:\\Users\\Victo\\.nuget\\packages\\fslexyacc\\10.2.0\\fslexyacc.10.2.0.nupkg.sha512",
+    "C:\\Users\\Victo\\.nuget\\packages\\fslexyacc.runtime\\10.2.0\\fslexyacc.runtime.10.2.0.nupkg.sha512"
   ],
   "logs": []
 }

@@ -118,3 +118,5 @@ C:/Users/Victo/Documents/GitHub/IPS/fasto/fasto/obj/Debug/net7.0/ref/Fasto.dll
 /Users/helgarykov/Documents/IPS/IPS/Task1_Tests/fasto/fasto/obj/Debug/net7.0/Fasto.pdb
 /Users/helgarykov/Documents/IPS/IPS/Task1_Tests/fasto/Fasto/obj/Debug/net7.0/Fasto.genruntimeconfig.cache
 /Users/helgarykov/Documents/IPS/IPS/Task1_Tests/fasto/Fasto/obj/Debug/net7.0/ref/Fasto.dll
+c:\Users\Victo\Documents\GitHub\IPS\fasto\fasto\obj\Debug\net7.0\Fasto.AssemblyInfoInputs.cache
+c:\Users\Victo\Documents\GitHub\IPS\fasto\fasto\obj\Debug\net7.0\Fasto.AssemblyInfo.fs
