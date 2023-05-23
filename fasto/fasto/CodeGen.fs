@@ -230,24 +230,36 @@ let rec compileExp  (e      : TypedExp)
       let code2 = compileExp e2 vtable t2
       code1 @ code2 @ [SUB (place,t1,t2)]
 
-  (* TODO project task 1:
-     Look in `AbSyn.fs` for the expression constructors `Times`, ...
-     `Times` is very similar to `Plus`/`Minus`.
-     For `Divide`, you may ignore division by zero for a quick first
-     version, but remember to come back and clean it up later.
-     `Not` and `Negate` are simpler; you can use `XORI` for `Not`
-  *)
-  | Times (_, _, _) ->
-      failwith "Unimplemented code generation of multiplication"
+  | Times (e1, e2, pos) ->
+    let t1 = newReg "times_L"
+    let t2 = newReg "times_R"
+    let code1 = compileExp e1 vtable t1
+    let code2 = compileExp e2 vtable t2
+    code1 @ code2 @ [MUL (place, t1, t2)]
 
-  | Divide (_, _, _) ->
-      failwith "Unimplemented code generation of division"
+  | Divide (e1, e2, pos) ->
+    let t1 = newReg "divide_L"
+    let t2 = newReg "divide_R"
+    let code1 = compileExp e1 vtable t1
+    let code2 = compileExp e2 vtable t2
+    let zeroDivisorLabel = newLab "zero_divisor"
+    let checkZero = [BEQ (t2, Rzero, zeroDivisorLabel)]
+    let division = [DIV (place, t1, t2)]
+    let zeroDivisorComment = [COMMENT "Division by zero error handling"]
+    let zeroDivisorError = [LABEL zeroDivisorLabel] @ zeroDivisorComment
+    code1 @ code2 @ checkZero @ division @ zeroDivisorError 
 
-  | Not (_, _) ->
-      failwith "Unimplemented code generation of not"
+  | Not (e, pos) ->
+    let t = newReg "not_temp"
+    let code = compileExp e vtable t
+    let notCode = [XORI (place, t, -1)]         //toggle all the bits of the source register; -1=1111 1111 1111
+    code @ notCode
 
-  | Negate (_, _) ->
-      failwith "Unimplemented code generation of negate"
+  | Negate (e, pos) ->
+    let t = newReg "negate_temp"
+    let code = compileExp e vtable t
+    let negationCode = [SUB (place, Rzero, t)]   // Subtract the value from zero to negate it
+    code @ negationCode
 
   | Let (dec, e1, pos) ->
       let (code1, vtable1) = compileDec dec vtable
@@ -336,18 +348,42 @@ let rec compileExp  (e      : TypedExp)
       let code2 = compileExp e2 vtable t2
       code1 @ code2 @ [SLT (place,t1,t2)]
 
-  (* TODO project task 1:
-        Look in `AbSyn.fs` for the expression constructors of `And` and `Or`.
-        The implementation of `And` and `Or` is more complicated than `Plus`
-        because you need to ensure the short-circuit semantics, e.g.,
-        in `e1 || e2` if the execution of `e1` will evaluate to `true` then
-        the code of `e2` must not be executed. Similarly for `And` (&&).
-  *)
-  | And (_, _, _) ->
-      failwith "Unimplemented code generation of &&"
+  | And (e1, e2, pos) ->
+      let t1 = newReg "and_temp_1"
+      let t2 = newReg "and_temp_2"
+      let tempReg = newReg "and_temp_reg"
+      let code1 = compileExp e1 vtable t1
+      let code2 = compileExp e2 vtable t2
+      let falseLabel = newLab "and_false"
+      let endLabel = newLab "and_end"
+      code1 @ code2 @
+        [ BEQ (t1, Rzero, falseLabel)        // If e1 is false, jump to falseLabel
+        ; BEQ (t2, Rzero, falseLabel)        // If e2 is false, jump to falseLabel
+        ; LI (place, 1)                     // If both e1 and e2 are true, set result to true
+        ; J endLabel                        // Jump to endLabel
+        ; LABEL falseLabel                  // Label for false case
+        ; LI (place, 0)                      // Set the result to false
+        ; LABEL endLabel                     // Label for end of function
+        ]
 
-  | Or (_, _, _) ->
-      failwith "Unimplemented code generation of ||"
+  | Or (e1, e2, pos) ->
+      let t1 = newReg "or_temp_1"
+      let t2 = newReg "or_temp_2"
+      let r1 = newReg "or_one"
+      let code1 = compileExp e1 vtable t1
+      let code2 = compileExp e2 vtable t2
+      let trueLabel = newLab "or_true"
+      let endLabel = newLab "or_end"
+      code1 @ code2 @
+        [ LI (r1, 1)                        // Load 1 into r1
+        ; BEQ (t1, r1, trueLabel)           // If e1 is true (equal to r1), jump to trueLabel
+        ; BEQ (t2, r1, trueLabel)           // If e2 is true (equal to r1), jump to trueLabel
+        ; LI (place, 0)                     // If both e1 and e2 are false, set result to false
+        ; J endLabel                        // Jump to endLabel
+        ; LABEL trueLabel                   // Label for true case
+        ; LI (place, 1)                     // Set the result to true
+        ; LABEL endLabel                    // Label for end of function
+        ] 
 
   (* Indexing:
      1. generate code to compute the index
