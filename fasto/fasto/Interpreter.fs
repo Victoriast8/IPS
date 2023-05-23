@@ -278,7 +278,7 @@ let rec evalExp (e : UntypedExp, vtab : VarTable, ftab : FunTable) : Value =
                   let farr = List.filter (fun x -> extractBool (evalFunArg (p, vtab, ftab, pos, [x]))) arrval
                   ArrayVal ((farr), tp1)
             | otherwise              -> reportNonArray "2nd argument of \"filter\"" resa pos
-        | otherwise  -> raise (MyError ("Predicate of \"filter\" returned wrong type", pos)) // TODO: update error
+        | otherwise  -> raise (MyError ("Predicate of \"filter\" returned wrong type", pos)) // TODO: update error - Viggo
 
   (* TODO project task 2: `scan(f, ne, arr)`
      Implementation similar to reduce, except that it produces an array
