@@ -68,7 +68,7 @@ let rec removeDeadBindingsInExp (e : TypedExp) : (bool * DBRtab * TypedExp) =
                         you need to record it in a new symbol table.
                   - 3rd element of the tuple: should be the optimised expression.
             *)
-            failwith "Unimplemented removeDeadBindingsInExp for Var"
+            (false, SymTab.bind name () (SymTab.empty()), Var (name, pos))
         | Plus (x, y, pos) ->
             let (xios, xuses, x') = removeDeadBindingsInExp x
             let (yios, yuses, y') = removeDeadBindingsInExp y
@@ -118,8 +118,8 @@ let rec removeDeadBindingsInExp (e : TypedExp) : (bool * DBRtab * TypedExp) =
                         expression `e` and to propagate its results (in addition
                         to recording the use of `name`).
             *)
-            failwith "Unimplemented removeDeadBindingsInExp for Index"
-
+            let (eIO, euses, e') = removeDeadBindingsInExp e
+            (eIO, (SymTab.combine (SymTab.bind name () (SymTab.empty())) euses), Index (name, e', t, pos))
         | Let (Dec (name, e, decpos), body, pos) ->
             (* Task 3, Hints for the `Let` case:
                   - recursively process the `e` and `body` subexpressions
@@ -144,7 +144,18 @@ let rec removeDeadBindingsInExp (e : TypedExp) : (bool * DBRtab * TypedExp) =
                     Let-expression.
 
             *)
-            failwith "Unimplemented removeDeadBindingsInExp for Let"
+            let (eIO, euses, e') = removeDeadBindingsInExp e
+            let (bodyIO, bodyUses, body') = removeDeadBindingsInExp e
+            let letIO = eIO || bodyIO
+            let slookup = SymTab.lookup name bodyUses
+            let (letUses, optExp) = match slookup with
+                                    | Some _ -> 
+                                            let optTab = SymTab.combine (SymTab.remove name euses) (SymTab.remove name bodyUses)
+                                            (optTab, Let (Dec (name, e', decpos), body', pos))
+                                    | None   -> 
+                                            let optTab = SymTab.combine euses bodyUses
+                                            (optTab, body')
+            (letIO, letUses, optExp)
         | Iota (e, pos) ->
             let (io, uses, e') = removeDeadBindingsInExp e
             (io,
