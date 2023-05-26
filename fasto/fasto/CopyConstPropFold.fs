@@ -29,18 +29,17 @@ let rec copyConstPropFoldExp (vtable : VarTable)
                 with the variable or constant to be propagated.
             *)
             match SymTab.lookup name vtable with
-            | None            -> Var (name, pos)
-            | Some (VarProp v1) -> Var (v1, pos)
-            | _               -> failwith (name + " did not match expression Var")
+            | Some (VarProp v1)   -> Var (v1, pos)
+            | Some (ConstProp c1) -> Constant (c1, pos)
+            | otherwise           -> Var (name, pos)
         | Index (name, e, t, pos) ->
             (* TODO project task 3:
                 Should probably do the same as the `Var` case, for
                 the array name, and optimize the index expression `e` as well.
             *)
             let name' = match SymTab.lookup name vtable with
-                        | None              -> name
                         | Some (VarProp v1) -> v1
-                        | _                 -> failwith (name + " did not match expression Index")
+                        | otherwise         -> name
             let e' = copyConstPropFoldExp vtable e
             Index (name', e', t, pos)
         | Let (Dec (name, e, decpos), body, pos) ->

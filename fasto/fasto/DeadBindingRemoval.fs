@@ -149,8 +149,8 @@ let rec removeDeadBindingsInExp (e : TypedExp) : (bool * DBRtab * TypedExp) =
             let letIO = eIO || bodyIO
             let slookup = SymTab.lookup name bodyUses
             let (letUses, optExp) = match slookup with
-                                    | Some n -> 
-                                            let optTab = SymTab.combine euses (SymTab.remove name bodyUses)
+                                    | Some _ -> 
+                                            let optTab = SymTab.combine (SymTab.remove name euses) (SymTab.remove name bodyUses)
                                             (optTab, Let (Dec (name, e', decpos), body', pos))
                                     | None   -> 
                                             let optTab = SymTab.combine euses bodyUses
