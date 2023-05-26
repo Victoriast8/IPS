@@ -35,8 +35,8 @@ let parse_error_rich =
 %token <Position> PLUS MINUS LESS
 %token <Position> TIMES DIVIDE
 %token <Position> NOT NEGATE
-%token <Position> AND OR                                   
-%token <Position> DEQ LTH EQ MAP REDUCE IOTA ARROW
+%token <Position> AND OR
+%token <Position> DEQ LTH EQ MAP REDUCE FILTER SCAN REPLICATE IOTA ARROW
 %token <Position> FUN FN COMMA SEMICOLON READ WRITE
 %token <Position> LPAR RPAR LBRACKET RBRACKET LCURLY RCURLY
 %token <Position> TRUE FALSE
@@ -135,6 +135,12 @@ Exp : NUM            { Constant (IntVal (fst $1), snd $1) }
                      { Map ($3, $5, (), (), $1) }
     | REDUCE LPAR FunArg COMMA Exp COMMA Exp RPAR
                      { Reduce ($3, $5, $7, (), $1) }
+    | FILTER LPAR FunArg COMMA Exp RPAR
+                     { Filter ($3, $5, (), $1) }
+    | REPLICATE LPAR Exp COMMA Exp RPAR
+                     { Replicate ($3, $5, (), $1) }
+    | SCAN LPAR FunArg COMMA Exp COMMA Exp RPAR
+                     { Scan ($3, $5, $7, (), $1) }
     | LPAR Exp RPAR  { $2 }
     
     | LET Decs { $2 }
