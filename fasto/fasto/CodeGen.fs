@@ -167,9 +167,10 @@ let rec compileExp  (e      : TypedExp)
   | Constant (IntVal n, pos) ->
       [ LI (place, n) ] (* assembler will generate appropriate
                            instruction sequence for any value n *)
-  | Constant (BoolVal p, _) ->
-      (* TODO project task 1: represent `true`/`false` values as `1`/`0` *)
-      failwith "Unimplemented code generation of boolean constants"
+  | Constant (BoolVal p, pos) ->
+      match p with
+      | true  -> [ LI (place, 1) ]
+      | false -> [ LI (place, 0) ]
   | Constant (CharVal c, pos) -> [ LI (place, int c) ]
 
   (* Create/return a label here, collect all string literals of the program
@@ -351,19 +352,19 @@ let rec compileExp  (e      : TypedExp)
   | And (e1, e2, pos) ->
       let t1 = newReg "and_temp_1"
       let t2 = newReg "and_temp_2"
-      let tempReg = newReg "and_temp_reg"
       let code1 = compileExp e1 vtable t1
       let code2 = compileExp e2 vtable t2
       let falseLabel = newLab "and_false"
       let endLabel = newLab "and_end"
-      code1 @ code2 @
-        [ BEQ (t1, Rzero, falseLabel)        // If e1 is false, jump to falseLabel
-        ; BEQ (t2, Rzero, falseLabel)        // If e2 is false, jump to falseLabel
+      code1 @
+        [ BEQ (t1, Rzero, falseLabel) ]     // If e1 is false, jump to falseLabel
+        @ code2 @
+        [ BEQ (t2, Rzero, falseLabel)       // If e2 is false, jump to falseLabel
         ; LI (place, 1)                     // If both e1 and e2 are true, set result to true
         ; J endLabel                        // Jump to endLabel
-        ; LABEL falseLabel                  // Label for false case
-        ; LI (place, 0)                      // Set the result to false
-        ; LABEL endLabel                     // Label for end of function
+        ; LABEL (falseLabel)                // Label for false case
+        ; LI (place, 0)                     // Set the result to false
+        ; LABEL (endLabel)                  // Label for end of function
         ]
 
   | Or (e1, e2, pos) ->
@@ -374,16 +375,17 @@ let rec compileExp  (e      : TypedExp)
       let code2 = compileExp e2 vtable t2
       let trueLabel = newLab "or_true"
       let endLabel = newLab "or_end"
-      code1 @ code2 @
+      code1 @
         [ LI (r1, 1)                        // Load 1 into r1
-        ; BEQ (t1, r1, trueLabel)           // If e1 is true (equal to r1), jump to trueLabel
-        ; BEQ (t2, r1, trueLabel)           // If e2 is true (equal to r1), jump to trueLabel
+        ; BEQ (t1, r1, trueLabel) ]         // If e1 is true (equal to r1), jump to trueLabel
+        @ code2 @
+        [ BEQ (t2, r1, trueLabel)           // If e2 is true (equal to r1), jump to trueLabel
         ; LI (place, 0)                     // If both e1 and e2 are false, set result to false
         ; J endLabel                        // Jump to endLabel
-        ; LABEL trueLabel                   // Label for true case
+        ; LABEL (trueLabel)                 // Label for true case
         ; LI (place, 1)                     // Set the result to true
-        ; LABEL endLabel                    // Label for end of function
-        ] 
+        ; LABEL (endLabel)                  // Label for end of function
+        ]
 
   (* Indexing:
      1. generate code to compute the index
@@ -576,16 +578,27 @@ let rec compileExp  (e      : TypedExp)
         If `n` is less than `0` then remember to terminate the program with
         an error -- see implementation of `iota`.
   *)
-  | Replicate (n_exp, a_exp, tp, pos) ->
+  | Replicate (n_exp, a_exp, tp, (pos1, _)) ->
       let size_reg = newReg "size" (* size of input/output array *)
-      let arr_reg  = newReg "arr"  (* address of array *)
-      let addr_reg = newReg "addrg" (* address of element in new array *)
-      let i_reg = newReg "i"
-      et arr_code = compileExp arr_exp vtable arr_reg
+      let a_reg    = newReg "a"    (* value of expr a *)
+      let addr_reg = newReg "addr" (* address of element in new array *)
+      let i_reg    = newReg "i"
+
+      (* Evaluate expressions into their respective registers *)
+      let get_replicates = compileExp n_exp vtable size_reg
+      let eval_a_exp = compileExp a_exp vtable a_reg
+      let elem_size = getElemSize tp
+
+      let safe_lab = newLab "safe"
+      let checksize = [ BGE (size_reg, Rzero, safe_lab)
+                      ; LI (Ra0, pos1)
+                      ; LA (Ra1, "m.BadSize")
+                      ; J "p.RuntimeError"
+                      ; LABEL (safe_lab)
+                      ]
 
       let init_regs = [ ADDI (addr_reg, place, 4)
                       ; MV (i_reg, Rzero)
-                      ; ADDI (elem_reg, arr_reg, 4)
                       ]
 
       let loop_beg = newLab "loop_beg"
@@ -593,18 +606,21 @@ let rec compileExp  (e      : TypedExp)
       let loop_header = [ LABEL (loop_beg)
                         ; BGE (i_reg, size_reg, loop_end)
                         ]
-      let loop_replicate = [ Store elem_size (elem_reg, addr_reg, 0)
+
+      let loop_replicate = [ Store elem_size (a_reg, addr_reg, 0)
                            ; ADDI (addr_reg, addr_reg, elemSizeToInt elem_size)
                            ]
+
       let loop_footer =
               [ ADDI (i_reg, i_reg, 1)
               ; J loop_beg
               ; LABEL loop_end
               ]
 
-      arr_code
-       @ get_size
-       @ dynalloc (size_reg, place, ret_type)
+      get_replicates
+       @ eval_a_exp
+       @ checksize
+       @ dynalloc (size_reg, place, tp)
        @ init_regs
        @ loop_header
        @ loop_replicate
@@ -625,52 +641,60 @@ let rec compileExp  (e      : TypedExp)
          counter computed in step (c). You do this of course with a
          `SW(counter_reg, place, 0)` instruction.
   *)
-  | Filter (f, arr, tp, pos) ->
-    let size_reg = newReg "size" (* size of input/output array *)
-    let arr_reg  = newReg "arr"  (* address of array *)
-    let input_elem_reg = newReg "elem" (* address of current input element *)
-    let input_i_reg = newReg "i" (* counter for elements in input array *)
+  | Filter (f, arr_exp, tp, pos) ->
+      let size_reg = newReg "size" (* size of input array *)
+      let arr_reg  = newReg "arr"  (* address of input array *)
+      let inc_reg  = newReg "inc"  (* incrementer / counter *)
+      let addr_reg = newReg "addr" (* address of output array *)
+      let i_reg    = newReg "i"    (* iterator *)
+      let tmp_reg  = newReg "tmp"  (* temporary register *)
+      let res_reg  = newReg "res"  (* holds current input element *)
+      let elem_size = getElemSize tp
 
-    let res_reg = newReg "res" (* holding bool-function return value *)
-    let arr_code = compileExp arr vtable arr_reg
+      let arr_code = compileExp arr_exp vtable arr_reg
 
-    let get_size = [ LW (size_reg, arr_reg, 0) ] (* size of input array *)
+      let get_size = [ LW (size_reg, arr_reg, 0) ] (* size of input array *)
 
-    let res_addr_reg = newReg "addrg" (* address of element in result array *)
-    let res_j_reg = newReg "j" (* counter for elements in result array *)
-
-    let init_regs = [ ADDI (res_addr_reg, place, 4)
-                    ; MV (input_i_reg, Rzero)
-                    ; MV (res_j_reg, Rzero)
-                    ; ADDI (input_elem_reg, arr_reg, 4)
-                    ]
-    let loop_beg = newLab "loop_beg"
-    let loop_end = newLab "loop_end"
-    let loop_header = [ LABEL (loop_beg)
-                      ; BGE (input_i_reg, size_reg, loop_end)
+      let init_regs = [ ADDI (addr_reg, place, 4)
+                      ; MV (i_reg, Rzero)
+                      ; MV (inc_reg, Rzero)
+                      ; ADDI (arr_reg, arr_reg, 4)
                       ]
-    let loop_filter = [ Load (getElemSize tp, res_reg, input_elem_reg, 0)
-                      ; applyFunArg (f, [res_reg], vtable, res_reg, pos)
-                      ; BEQ (res_reg, Rzero, loop_footer)
-                      ; SW (res_reg, res_addr_reg, 0)
-                      ; ADDI (res_addr_reg, res_addr_reg, 4)
-                      ; ADDI (res_j_reg, res_j_reg, 1)
-                      ]
-    let loop_footer =
-                  [ ADDI (input_elem_reg, input_elem_reg, 4)
-                  ; ADDI (input_i_reg, input_i_reg, 1)
-                  ; J loop_beg
-                  ; LABEL loop_end
-                  ; SW (res_j_reg, place, 0) (* update the size of the result array *)
-                  ]
 
-    arr_code
-      @ get_size
-      @ dynalloc (size_reg, place, ret_type)
-      @ init_regs
-      @ loop_header
-      @ loop_filter
-      @ loop_footer
+      let loop_beg = newLab "loop_beg"
+      let fil_false = newLab "fil_false"
+      let loop_end = newLab "loop_end"
+
+      let loop_header = [ LABEL (loop_beg)
+                        ; BGE (i_reg, size_reg, loop_end)
+                        ; Load elem_size (res_reg, arr_reg, 0)
+                        ]
+
+      let apply_code =
+          applyFunArg (f, [res_reg], vtable, tmp_reg, pos)
+
+      let loop_filter = [ BEQ (tmp_reg, Rzero, fil_false)
+                        ; SW (res_reg, addr_reg, 0)
+                        ; ADDI (addr_reg, addr_reg, elemSizeToInt elem_size)
+                        ; ADDI (inc_reg, inc_reg, 1)
+                        ]
+
+      let loop_footer = [ LABEL (fil_false)
+                        ; ADDI (arr_reg, arr_reg, elemSizeToInt elem_size)
+                        ; ADDI (i_reg, i_reg, 1)
+                        ; J loop_beg
+                        ; LABEL (loop_end)
+                        ; SW (inc_reg, place, 0) (* update the size of the result array *)
+                        ]
+
+      arr_code
+        @ get_size
+        @ dynalloc (size_reg, place, tp)
+        @ init_regs
+        @ loop_header
+        @ apply_code
+        @ loop_filter
+        @ loop_footer
   (* TODO project task 2: see also the comment to replicate.
      `scan(f, ne, arr)`: you can inspire yourself from the implementation of
         `reduce`, but in the case of `scan` you will need to also maintain
@@ -678,8 +702,55 @@ let rec compileExp  (e      : TypedExp)
         the current location of the result iterator at every iteration of
         the loop.
   *)
-  | Scan (_, _, _, _, _) ->
-      failwith "Unimplemented code generation of scan"
+  | Scan (binop, acc_exp, arr_exp, tp, pos) ->
+      let arr_reg  = newReg "arr"   (* address of array *)
+      let size_reg = newReg "size"  (* size of input array *)
+      let i_reg    = newReg "ind_var"   (* loop counter *)
+      let tmp_reg  = newReg "tmp"   (* several purposes *)
+      let addr_reg = newReg "addr"  (* current result element adress *)
+      let acc_reg  = newReg "acc"   (* accumulator *)
+      let loop_beg = newLab "loop_beg"
+      let loop_end = newLab "loop_end"
+
+      let arr_code = compileExp arr_exp vtable arr_reg
+      let get_size = [ LW(size_reg, arr_reg, 0) ]
+
+      (* Allocate memory *)
+      let alloc =
+            dynalloc (size_reg, place, tp)
+
+      (* Compile initial value into accumulator (will be updated below) *)
+      let acc_code = compileExp acc_exp vtable acc_reg
+
+      (* Set arr_reg to address of first element instead. *)
+      (* Set i_reg to 0. While i < size_reg, loop. *)
+      let loop_code =
+          [ ADDI (arr_reg, arr_reg, 4)
+          ; ADDI (addr_reg, place, 4)
+          ; MV (i_reg, Rzero)
+          ; LABEL (loop_beg)
+          ; BGE (i_reg, size_reg, loop_end)
+          ]
+      (* Load arr[i] into tmp_reg *)
+      let elem_size = getElemSize tp
+      let load_code =
+          [ Load elem_size (tmp_reg, arr_reg, 0)
+          ; ADDI (arr_reg, arr_reg, elemSizeToInt elem_size)
+          ]
+      (* place[i] := binop(accumulator, tmp_reg) *)
+      let apply_code =
+          applyFunArg(binop, [acc_reg; tmp_reg], vtable, acc_reg, pos)
+      
+      let update_regs =
+          [ Store elem_size (acc_reg, addr_reg, 0)
+          ; ADDI (addr_reg, addr_reg, elemSizeToInt elem_size)
+          ]
+
+      arr_code @ get_size @ alloc @ acc_code @ loop_code @ load_code @ apply_code @ update_regs @
+          [ ADDI(i_reg, i_reg, 1)
+          ; J loop_beg
+          ; LABEL loop_end
+          ]
 
 and applyFunArg ( ff     : TypedFunArg
                 , args   : reg list
