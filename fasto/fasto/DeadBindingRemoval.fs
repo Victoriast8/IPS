@@ -145,7 +145,7 @@ let rec removeDeadBindingsInExp (e : TypedExp) : (bool * DBRtab * TypedExp) =
 
             *)
             let (eIO, euses, e') = removeDeadBindingsInExp e
-            let (bodyIO, bodyUses, body') = removeDeadBindingsInExp e
+            let (bodyIO, bodyUses, body') = removeDeadBindingsInExp body
             match isUsed name bodyUses || eIO with
             | false -> 
                     (bodyIO, bodyUses, body')
