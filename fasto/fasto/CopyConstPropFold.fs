@@ -31,7 +31,7 @@ let rec copyConstPropFoldExp (vtable : VarTable)
             match SymTab.lookup name vtable with
             | Some (VarProp v1)   -> Var (v1, pos)
             | Some (ConstProp c1) -> Constant (c1, pos)
-            | otherwise           -> Var (name, pos)
+            | _                   -> Var (name, pos)
         | Index (name, e, t, pos) ->
             (* TODO project task 3:
                 Should probably do the same as the `Var` case, for
@@ -39,7 +39,7 @@ let rec copyConstPropFoldExp (vtable : VarTable)
             *)
             let name' = match SymTab.lookup name vtable with
                         | Some (VarProp v1) -> v1
-                        | otherwise         -> name
+                        | _                 -> name
             let e' = copyConstPropFoldExp vtable e
             Index (name', e', t, pos)
         | Let (Dec (name, e, decpos), body, pos) ->
@@ -77,7 +77,7 @@ let rec copyConstPropFoldExp (vtable : VarTable)
                         restructured, semantically-equivalent expression:
                                 `let x = e1 in let y = e2 in e3`
                     *)
-                    let innerExp' = copyConstPropFoldExp vtable innerExp
+                    (*let innerExp' = copyConstPropFoldExp vtable innerExp
                     let vtable' = match innerExp' with
                                   | Var (varName, _) -> SymTab.bind innerName (VarProp(varName)) vtable
                                   | Constant (c, _)  -> SymTab.bind innerName (ConstProp(c)) vtable
@@ -87,8 +87,9 @@ let rec copyConstPropFoldExp (vtable : VarTable)
                                    | Var (varName, _) -> SymTab.bind name (VarProp(varName)) vtable'
                                    | Constant (c, _)  -> SymTab.bind name (ConstProp(c)) vtable'
                                    | _                -> vtable'
-                    let body' = copyConstPropFoldExp vtable'' body
-                    Let (Dec (innerName, innerExp', innerDecpos), (Let (Dec (name, innerBody', decpos), body', pos)), innerPos)
+                    let body' = copyConstPropFoldExp vtable'' body*)
+                    //Let (Dec (innerName, innerExp', innerDecpos), (Let (Dec (name, innerBody', decpos), body', pos)), innerPos)
+                    copyConstPropFoldExp vtable (Let (Dec (innerName, innerExp, decpos), (Let (Dec (name, innerBody, innerDecpos), body, innerPos)), pos))
                 | _ -> (* Fallthrough - for everything else, do nothing *)
                     let body' = copyConstPropFoldExp vtable body
                     Let (Dec (name, e', decpos), body', pos)
