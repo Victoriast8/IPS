@@ -94,12 +94,12 @@ let rec copyConstPropFoldExp (vtable : VarTable)
                     match eLet with
                     | Let (Dec (_, e'', _), b', _) -> 
                             let vtable' = match b' with
-                                          | Var (varName, _) -> SymTab.bind innerName (VarProp(varName)) vtable
-                                          | Constant (c, _)  -> SymTab.bind innerName (ConstProp(c)) vtable
+                                          | Var (varName, _) -> SymTab.bind name (VarProp(varName)) vtable
+                                          | Constant (c, _)  -> SymTab.bind name (ConstProp(c)) vtable
                                           | _                -> vtable
                             let body' = copyConstPropFoldExp vtable' body
                             Let (Dec (name, (Let (Dec (innerName, e'', innerDecpos), b', innerPos)), decpos), body', pos)
-                    | _ -> eLet
+                    | _ -> eLet // ignore every other case as they won't ever be hit.
                 | _ -> (* Fallthrough - for everything else, do nothing *)
                     let body' = copyConstPropFoldExp vtable body
                     Let (Dec (name, e', decpos), body', pos)
